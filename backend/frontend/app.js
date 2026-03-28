@@ -195,17 +195,17 @@ function renderPosts(c, posts) {
   c.innerHTML = posts.map(postCard).join('');
 }
 function postCard(p) {
-  return `<div class="card" data-post-id="${p.id}">
+  return `<div class="card" data-post-id="${p.id}" onclick="navigate('profile',{userId:${p.author?.id}})" style="cursor:pointer">
     <div class="post-header">
-      <button onclick="navigate('profile',{userId:${p.author?.id}})" style="flex-shrink:0">${avatarHtml(p.author, 'sm')}</button>
-      <div style="flex:1;min-width:0">
+      <div style="flex-shrink:0" onclick="event.stopPropagation();navigate('profile',{userId:${p.author?.id}})">${avatarHtml(p.author, 'sm')}</div>
+      <div style="flex:1;min-width:0" onclick="event.stopPropagation();navigate('profile',{userId:${p.author?.id}})">
         <div class="post-author-name">${escHtml(p.author?.username || 'Usuário')}</div>
         <div class="post-author-handle">@${escHtml(p.author?.handle || '')} · ${timeAgo(p.created_at)}</div>
       </div>
     </div>
-    <div class="post-content">${escHtml(p.content)}</div>
-    ${p.image_url ? `<img class="post-image" src="${escHtml(p.image_url)}" alt="" loading="lazy">` : ''}
-    <div class="post-actions">
+    <div class="post-content" onclick="event.stopPropagation()">${escHtml(p.content)}</div>
+    ${p.image_url ? `<img class="post-image" src="${escHtml(p.image_url)}" alt="" loading="lazy" onclick="event.stopPropagation()">` : ''}
+    <div class="post-actions" onclick="event.stopPropagation()">
       <button class="post-action ${p.liked ? 'liked' : ''}" onclick="event.stopPropagation();toggleLike(${p.id},this)">
         <svg viewBox="0 0 24 24" fill="${p.liked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
         <span>${p.likes}</span>
