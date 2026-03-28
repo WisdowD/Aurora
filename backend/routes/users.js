@@ -47,13 +47,23 @@ router.get('/', authMiddleware, async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Erro interno' }); }
 });
 
-// GET /api/users/:handle  — DEVE vir depois de /me e /
-router.get('/:handle', authMiddleware, async (req, res) => {
+// GET /api/users/:idOrHandle — busca por ID numérico OU handle
+router.get('/:idOrHandle', authMiddleware, async (req, res) => {
   try {
-    const user = await db.get(
-      'SELECT id, username, handle, bio, avatar_url, banner_url, created_at FROM users WHERE handle = ?',
-      [req.params.handle]
-    );
+    const param = req.params.idOrHandle;
+    let user;
+    // Se for número, busca por ID; senão busca por handle
+    if (/^\d+$/.test(param)) {
+      user = await db.get(
+        'SELECT id, username, handle, bio, avatar_url, banner_url, created_at FROM users WHERE id = ?',
+        [parseInt(param)]
+      );
+    } else {
+      user = await db.get(
+        'SELECT id, username, handle, bio, avatar_url, banner_url, created_at FROM users WHERE handle = ?',
+        [param]
+      );
+    }
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
     res.json(await enrichUser(user, req.userId));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Erro interno' }); }
