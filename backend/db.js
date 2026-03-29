@@ -7,7 +7,6 @@ const fs = require('fs');
 // Localmente usa a pasta do backend mesmo
 const dbDir = process.env.DB_PATH || process.env.RAILWAY_VOLUME_MOUNT_PATH || __dirname;
 
-// Garante que o diretório existe
 if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
