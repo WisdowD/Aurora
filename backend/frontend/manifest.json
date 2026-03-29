@@ -9,14 +9,14 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "aurora-boreal-menor.png",
-      "sizes": "128x128",
-      "type": "image/png"
+      "src": "logo_192.svg",
+      "sizes": "192x192",
+      "type": "image/svg"
     },
     {
-      "src": "aurora-boreal.png",
+      "src": "logo_512.svg",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/svg"
     }
   ]
 }
