@@ -555,8 +555,29 @@ a {
   border-bottom: 1px solid var(--border);
 }
 
+.follow-item-clickable {
+  cursor: pointer;
+  transition: background var(--transition);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 0 -12px;
+}
+
+.follow-item-clickable:hover {
+  background: var(--surface-hover);
+}
+
 .follow-item:last-child {
   border-bottom: none;
+}
+
+.follow-bio {
+  font-size: 0.8em;
+  color: var(--text-faint);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .follow-info {
@@ -1738,3 +1759,7 @@ textarea.input {
   padding: 8px 12px;
 }
 
+#profile-posts .follow-item-clickable {
+  margin: 0 8px;
+  padding: 10px 12px;
+}
