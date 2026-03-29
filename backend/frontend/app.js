@@ -114,13 +114,13 @@ async function loadWhoToFollow() {
     const others = users.filter(u => u.id !== state.user?.id).slice(0, 4);
     if (!others.length) { list.innerHTML = '<p style="font-size:13px;color:var(--text-faint);text-align:center;padding:8px">Nenhuma sugestão</p>'; return; }
     list.innerHTML = others.map(u => `
-      <div class="follow-item">
+      <div class="follow-item follow-item-clickable" onclick="navigate('profile',{userId:${u.id}})">
         ${avatarHtml(u, 'sm')}
         <div class="follow-info">
           <div class="follow-name">${escHtml(u.username)}</div>
           <div class="follow-handle">@${escHtml(u.handle)}</div>
         </div>
-        <button class="btn btn-outline btn-sm ${u.isFollowing ? 'following' : ''}" onclick="quickFollow(${u.id},this)">
+        <button class="btn btn-outline btn-sm ${u.isFollowing ? 'following' : ''}" onclick="event.stopPropagation();quickFollow(${u.id},this)">
           ${u.isFollowing ? 'Seguindo' : 'Seguir'}
         </button>
       </div>
@@ -525,9 +525,18 @@ function renderProfile(user, isMe) {
       <div class="profile-handle">@${escHtml(user.handle)}</div>
       ${user.bio ? `<div class="profile-bio">${escHtml(user.bio)}</div>` : ''}
       <div class="profile-stats">
-        <div class="stat-item"><div class="stat-value">${user.followers ?? 0}</div><div class="stat-label">Seguidores</div></div>
-        <div class="stat-item"><div class="stat-value">${user.posts_count ?? 0}</div><div class="stat-label">Posts</div></div>
-        <div class="stat-item"><div class="stat-value">${user.following ?? 0}</div><div class="stat-label">Seguindo</div></div>
+        <div class="stat-item" onclick="setProfileTab('followers',${user.id})">
+          <div class="stat-value">${user.followers ?? 0}</div>
+          <div class="stat-label">Seguidores</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">${user.posts_count ?? 0}</div>
+          <div class="stat-label">Posts</div>
+        </div>
+        <div class="stat-item" onclick="setProfileTab('following',${user.id})">
+          <div class="stat-value">${user.following ?? 0}</div>
+          <div class="stat-label">Seguindo</div>
+        </div>
       </div>
       ${isMe
       ? `<button class="btn btn-outline" onclick="openEditProfile()">Editar Perfil</button>`
@@ -537,6 +546,8 @@ function renderProfile(user, isMe) {
     <div class="tab-bar" style="position:static">
       <button class="tab active" data-ptab="posts" onclick="setProfileTab('posts',${user.id})">Posts</button>
       <button class="tab" data-ptab="comments" onclick="setProfileTab('comments',${user.id})">Respostas</button>
+      <button class="tab" data-ptab="followers" onclick="setProfileTab('followers',${user.id})">Seguidores</button>
+      <button class="tab" data-ptab="following" onclick="setProfileTab('following',${user.id})">Seguindo</button>
       <button class="tab" data-ptab="saved" onclick="setProfileTab('saved',${user.id})">Salvos</button>
     </div>
     <div id="profile-posts"></div>`;
@@ -550,7 +561,28 @@ async function loadProfilePosts(tab = 'posts', uid) {
   const c = document.getElementById('profile-posts');
   if (!c || !id) return;
   c.innerHTML = `<div class="loader"><div class="spinner"></div></div>`;
-  try { const p = await api(`/posts/user/${id}?tab=${tab}`); renderPosts(c, p); } catch { c.innerHTML = `<div class="empty-state"><p>Erro.</p></div>`; }
+  try {
+    if (tab === 'followers' || tab === 'following') {
+      const users = await api(`/users/${id}/${tab}`);
+      if (!users.length) {
+        c.innerHTML = `<div class="empty-state"><p>${tab === 'followers' ? 'Nenhum seguidor ainda.' : 'Não está seguindo ninguém.'}</p></div>`;
+        return;
+      }
+      c.innerHTML = users.map(u => `
+        <div class="follow-item follow-item-clickable" onclick="navigate('profile',{userId:${u.id}})">
+          ${avatarHtml(u, 'sm')}
+          <div class="follow-info">
+            <div class="follow-name">${escHtml(u.username)}</div>
+            <div class="follow-handle">@${escHtml(u.handle)}</div>
+            ${u.bio ? `<div class="follow-bio">${escHtml(u.bio)}</div>` : ''}
+          </div>
+          ${u.id !== state.user?.id ? `<button class="btn btn-sm ${u.isFollowing ? 'btn-outline following' : 'btn-primary'}" onclick="event.stopPropagation();quickFollow(${u.id},this)">${u.isFollowing ? 'Seguindo' : 'Seguir'}</button>` : ''}
+        </div>`).join('');
+    } else {
+      const p = await api(`/posts/user/${id}?tab=${tab}`);
+      renderPosts(c, p);
+    }
+  } catch { c.innerHTML = `<div class="empty-state"><p>Erro.</p></div>`; }
 }
 async function toggleFollow(userId) {
   try {
