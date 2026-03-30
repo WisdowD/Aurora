@@ -146,6 +146,8 @@ function showApp() {
   fetchUnreadCount();
   loadWhoToFollow();
   applyPreferences();
+  // Mostrar botão admin se aplicável
+  if (state.user?.is_admin) document.getElementById('admin-nav-item').style.display = '';
 }
 async function handleLogin(e) {
   e.preventDefault();
@@ -204,6 +206,9 @@ function renderPosts(c, posts) {
 }
 function postCard(p) {
   const isOwner = state.user && p.author?.id === state.user.id;
+  const isAdmin = state.user?.is_admin;
+  const canDelete = isOwner || isAdmin;
+  const deleteAction = isAdmin && !isOwner ? `adminDeletePost(${p.id},this)` : `deletePost(${p.id},this)`;
   return `<div class="card" data-post-id="${p.id}" onclick="navigate('profile',{userId:${p.author?.id}})" style="cursor:pointer">
     <div class="post-header">
       <div style="flex-shrink:0" onclick="event.stopPropagation();navigate('profile',{userId:${p.author?.id}})">${avatarHtml(p.author, 'sm')}</div>
@@ -211,7 +216,7 @@ function postCard(p) {
         <div class="post-author-name">${escHtml(p.author?.username || 'Usuário')}</div>
         <div class="post-author-handle">@${escHtml(p.author?.handle || '')} · ${timeAgo(p.created_at)}</div>
       </div>
-      ${isOwner ? `<button class="post-action post-delete-btn" title="Excluir post" onclick="event.stopPropagation();deletePost(${p.id},this)">
+      ${canDelete ? `<button class="post-action post-delete-btn" title="Excluir post" onclick="event.stopPropagation();${deleteAction}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
       </button>` : ''}
     </div>
@@ -225,10 +230,6 @@ function postCard(p) {
       <button class="post-action" onclick="event.stopPropagation();openComments(${p.id})">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
         <span>${p.comments}</span>
-      </button>
-      <button class="post-action ${p.shared ? 'shared' : ''}" onclick="event.stopPropagation();toggleShare(${p.id},this)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-        <span>${p.shares}</span>
       </button>
       <button class="post-action ${p.saved ? 'saved' : ''}" onclick="event.stopPropagation();toggleSave(${p.id},this)" style="margin-left:auto">
         <svg viewBox="0 0 24 24" fill="${p.saved ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
@@ -643,6 +644,104 @@ async function submitEditProfile() {
 
 /* ══════════ SETTINGS ══════════ */
 function initSettings() { applyPreferences(); }
+
+/* ══════════ ADMIN PANEL ══════════ */
+let _banTargetId = null;
+
+function openAdminPanel() {
+  document.getElementById('overlay-admin').classList.add('open');
+  switchAdminTab('users');
+}
+function closeAdminPanel() {
+  document.getElementById('overlay-admin').classList.remove('open');
+}
+function switchAdminTab(tab) {
+  document.getElementById('admin-tab-users').classList.toggle('active', tab === 'users');
+  document.getElementById('admin-tab-posts').classList.toggle('active', tab === 'posts');
+  if (tab === 'users') loadAdminUsers();
+  else loadAdminPosts();
+}
+async function loadAdminUsers() {
+  const c = document.getElementById('admin-content');
+  c.innerHTML = `<div class="loader"><div class="spinner"></div></div>`;
+  try {
+    const users = await api('/admin/users');
+    if (!users.length) { c.innerHTML = `<p style="color:var(--text-2);text-align:center">Nenhum usuário.</p>`; return; }
+    c.innerHTML = users.map(u => `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+        ${avatarHtml(u, 'sm')}
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;display:flex;align-items:center;gap:6px">
+            ${escHtml(u.username)}
+            ${u.is_admin ? `<span style="font-size:.65em;background:var(--accent);color:#fff;padding:1px 5px;border-radius:4px">Admin</span>` : ''}
+            ${u.banned ? `<span style="font-size:.65em;background:#e53e3e;color:#fff;padding:1px 5px;border-radius:4px">Banido</span>` : ''}
+          </div>
+          <div style="color:var(--text-2);font-size:.82em">@${escHtml(u.handle)} · ${escHtml(u.email)}</div>
+          ${u.banned && u.ban_reason ? `<div style="color:#e53e3e;font-size:.78em;margin-top:2px">Motivo: ${escHtml(u.ban_reason)}</div>` : ''}
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          ${!u.is_admin && !u.banned ? `<button class="btn btn-sm" style="background:#e53e3e;color:#fff;border:none" onclick="openBanModal(${u.id},'${escHtml(u.username)}')">Banir</button>` : ''}
+          ${!u.is_admin && u.banned ? `<button class="btn btn-sm btn-outline" onclick="unbanUser(${u.id},this)">Desbanir</button>` : ''}
+        </div>
+      </div>`).join('');
+  } catch (e) { c.innerHTML = `<p style="color:var(--text-2)">Erro: ${e.message}</p>`; }
+}
+async function loadAdminPosts() {
+  const c = document.getElementById('admin-content');
+  c.innerHTML = `<div class="loader"><div class="spinner"></div></div>`;
+  try {
+    const posts = await api('/posts/home');
+    if (!posts.length) { c.innerHTML = `<p style="color:var(--text-2);text-align:center">Nenhum post.</p>`; return; }
+    c.innerHTML = posts.map(p => `
+      <div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);align-items:flex-start">
+        ${avatarHtml(p.author, 'sm')}
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:.88em">${escHtml(p.author?.username||'')} <span style="color:var(--text-2);font-weight:400">· ${timeAgo(p.created_at)}</span></div>
+          <div style="font-size:.88em;margin-top:2px;word-break:break-word">${escHtml(p.content)}</div>
+        </div>
+        <button class="post-action post-delete-btn" title="Excluir" onclick="adminDeletePost(${p.id},this)" style="flex-shrink:0">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+        </button>
+      </div>`).join('');
+  } catch (e) { c.innerHTML = `<p style="color:var(--text-2)">Erro: ${e.message}</p>`; }
+}
+async function adminDeletePost(id, btn) {
+  if (!confirm('Excluir este post como admin?')) return;
+  try {
+    await api(`/admin/posts/${id}`, { method: 'DELETE' });
+    const card = btn.closest('[data-post-id]') || btn.closest('div[style*="border-bottom"]');
+    if (card) { card.style.transition = 'opacity .2s'; card.style.opacity = '0'; setTimeout(() => card.remove(), 200); }
+    toast('Post excluído!', 'success');
+  } catch (e) { toast(e.message, 'error'); }
+}
+function openBanModal(userId, username) {
+  _banTargetId = userId;
+  document.getElementById('ban-modal-username').textContent = `Banir: ${username}`;
+  document.getElementById('ban-reason-input').value = '';
+  document.getElementById('overlay-ban').classList.add('open');
+}
+function closeBanModal() {
+  _banTargetId = null;
+  document.getElementById('overlay-ban').classList.remove('open');
+}
+async function confirmBan() {
+  const reason = document.getElementById('ban-reason-input').value.trim();
+  if (!reason) { toast('Informe o motivo do banimento', 'error'); return; }
+  try {
+    await api(`/admin/users/${_banTargetId}/ban`, { method: 'POST', body: JSON.stringify({ reason }) });
+    toast('Usuário banido com sucesso.', 'success');
+    closeBanModal();
+    loadAdminUsers();
+  } catch (e) { toast(e.message, 'error'); }
+}
+async function unbanUser(userId, btn) {
+  if (!confirm('Desbanir este usuário?')) return;
+  try {
+    await api(`/admin/users/${userId}/unban`, { method: 'POST' });
+    toast('Usuário desbanido.', 'success');
+    loadAdminUsers();
+  } catch (e) { toast(e.message, 'error'); }
+}
 
 /* ══════════ INIT ══════════ */
 document.addEventListener('DOMContentLoaded', () => {

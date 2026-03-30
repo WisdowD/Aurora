@@ -45,6 +45,9 @@ router.post('/login', async (req, res) => {
     if (!user || !bcrypt.compareSync(password, user.password))
       return res.status(401).json({ error: 'Credenciais inválidas' });
 
+    if (user.banned)
+      return res.status(403).json({ error: `Sua conta foi banida. Motivo: ${user.ban_reason || 'não informado'}` });
+
     const token = jwt.sign({ userId: user.id }, SECRET, { expiresIn: '7d' });
     const { password: _, ...safeUser } = user;
     res.json({ token, user: safeUser });

@@ -23,16 +23,16 @@ app.use('/api/auth',          require('./routes/auth'));
 app.use('/api/users',         require('./routes/users'));
 app.use('/api/posts',         require('./routes/posts'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/admin',         require('./routes/admin'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));
 
 // ─── Servir o Frontend (SPA) ───────────────────────────────────────────────────
-// Tenta encontrar o frontend em diferentes locais (local vs Railway)
 const possiblePaths = [
-  path.join(__dirname, '..', 'frontend'),   // estrutura local: Aurora/backend + Aurora/frontend
-  path.join(__dirname, 'frontend'),          // caso esteja na raiz junto
-  path.join(process.cwd(), 'frontend'),      // relativo ao diretório de execução
+  path.join(__dirname, '..', 'frontend'),   
+  path.join(__dirname, 'frontend'),          
+  path.join(process.cwd(), 'frontend'),      
 ];
 
 const frontendPath = possiblePaths.find(p => fs.existsSync(path.join(p, 'index.html')));

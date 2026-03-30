@@ -2,9 +2,6 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 
-// No Railway: defina RAILWAY_VOLUME_MOUNT_PATH ou DB_PATH como variável de ambiente
-// apontando para o Volume montado (ex: /data)
-// Localmente usa a pasta do backend mesmo
 const dbDir = process.env.DB_PATH || process.env.RAILWAY_VOLUME_MOUNT_PATH || __dirname;
 
 if (!fs.existsSync(dbDir)) {
@@ -56,6 +53,9 @@ async function init() {
       bio         TEXT    DEFAULT '',
       avatar_url  TEXT    DEFAULT '',
       banner_url  TEXT    DEFAULT '',
+      is_admin    INTEGER DEFAULT 0,
+      banned      INTEGER DEFAULT 0,
+      ban_reason  TEXT    DEFAULT NULL,
       created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -106,6 +106,12 @@ async function init() {
       created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  const cols = await db.all("PRAGMA table_info(users)");
+  const colNames = cols.map(c => c.name);
+  if (!colNames.includes('is_admin'))  await db.run("ALTER TABLE users ADD COLUMN is_admin  INTEGER DEFAULT 0");
+  if (!colNames.includes('banned'))    await db.run("ALTER TABLE users ADD COLUMN banned    INTEGER DEFAULT 0");
+  if (!colNames.includes('ban_reason'))await db.run("ALTER TABLE users ADD COLUMN ban_reason TEXT DEFAULT NULL");
   console.log('Banco de dados pronto');
 }
 
