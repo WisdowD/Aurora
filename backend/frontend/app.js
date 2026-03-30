@@ -640,7 +640,7 @@ async function submitEditProfile() {
     const avatar_url = avatarInput.dataset.localSrc || avatarInput.value;
     const banner_url = bannerInput.dataset.localSrc || bannerInput.value;
     const user = await api('/users/me', { method: 'PUT', body: JSON.stringify({ username: document.getElementById('edit-username').value, bio: document.getElementById('edit-bio').value, avatar_url, banner_url }) });
-
+    // clear local src cache
     avatarInput.dataset.localSrc = ''; bannerInput.dataset.localSrc = '';
     state.user = user; localStorage.setItem('user', JSON.stringify(user));
     document.getElementById('overlay-edit').classList.remove('open');
