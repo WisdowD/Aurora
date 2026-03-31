@@ -273,7 +273,7 @@ function postCard(p) {
       <div style="flex-shrink:0" onclick="event.stopPropagation();navigate('profile',{userId:${p.author?.id}})">${avatarHtml(p.author, 'sm')}</div>
       <div style="flex:1;min-width:0" onclick="event.stopPropagation();navigate('profile',{userId:${p.author?.id}})">
         <div class="post-author-name">${escHtml(p.author?.username || 'Usuário')}</div>
-        <div class="post-author-handle">@${escHtml(p.author?.handle || '')} · ${timeAgo(p.created_at)}</div>
+        <div class="post-author-handle">@${escHtml(p.author?.handle || '')} · ${timeAgo(p.created_at)}${p.updated_at ? ' · <span style="font-style:italic">editado</span>' : ''}</div>
       </div>
       <div style="display:flex;gap:4px">
         ${isOwner ? `<button class="post-action" title="Editar post" onclick="event.stopPropagation();openEditPost(${p.id},'${safeContent}')">
