@@ -16,10 +16,12 @@ Rede social completa baseada no design do Figma.
 │   ├── middleware/
 │   │   └── auth.js         # JWT middleware
 │   └── routes/
+│       ├── admin.js        # DELETE posts, ban user
 │       ├── auth.js         # POST /register, POST /login
 │       ├── users.js        # GET/PUT /me, follow, busca
-│       ├── posts.js        # CRUD posts, like, share, save
+│       ├── posts.js        # CRUD posts, like, save
 │       └── notifications.js
+|   
 └── frontend/
     ├── index.html          # SPA com todas as telas
     ├── styles.css          # Design system dark purple
@@ -49,11 +51,10 @@ O arquivo `social.db` é criado automaticamente na primeira execução do backen
 
 | Tabela | Descrição |
 |--------|-----------|
-| `users` | Usuários (username, handle, email, password hash, bio, avatar) |
+| `users` | Usuários (username, handle, email, password hash, bio, avatar, is_admin, banned, ban_reason) |
 | `follows` | Relação seguidor/seguido |
 | `posts` | Posts e replies (parent_id para threads) |
 | `likes` | Curtidas |
-| `shares` | Compartilhamentos |
 | `saved_posts` | Posts salvos |
 | `notifications` | Notificações (like, comment, share, follow) |
 
@@ -69,24 +70,35 @@ POST /api/auth/login      { email, password }
 
 ### Users (requer JWT)
 ```
-GET  /api/users/me
-PUT  /api/users/me        { username, bio, avatar_url, banner_url }
-GET  /api/users/:handle
-GET  /api/users?q=query
-POST /api/users/:id/follow
+GET    /api/users/me
+GET    /api/users
+GET    /api/users/:idOrHandle
+PUT    /api/users/me
+GET    /api/users/:id/followers
+GET    /api/users/:id/following
+POST   /api/users/:id/follow
 ```
 
 ### Posts (requer JWT)
 ```
-GET  /api/posts/feed
-GET  /api/posts/popular
-GET  /api/posts/user/:userId?tab=posts|comments|saved
-GET  /api/posts/:id
-POST /api/posts            { content, image_url?, parent_id? }
+GET    /api/posts/feed
+GET    /api/posts/home
+GET    /api/posts/popular
+GET    /api/posts/user/:userId
+GET    /api/posts/:id
+POST   /api/posts
 DELETE /api/posts/:id
-POST /api/posts/:id/like
-POST /api/posts/:id/share
-POST /api/posts/:id/save
+POST   /api/posts/:id/like
+POST   /api/posts/:id/share
+POST   /api/posts/:id/save
+```
+
+### Admin (requer JWT)
+``` 
+GET    /api/admin/users
+DELETE /api/admin/posts/:id
+POST   /api/admin/users/:id/ban
+POST   /api/admin/users/:id/unban
 ```
 
 ### Notifications (requer JWT)
