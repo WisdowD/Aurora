@@ -2,6 +2,9 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 
+// No Railway: defina RAILWAY_VOLUME_MOUNT_PATH ou DB_PATH como variável de ambiente
+// apontando para o Volume montado (ex: /data)
+// Localmente usa a pasta do backend mesmo
 const dbDir = process.env.DB_PATH || process.env.RAILWAY_VOLUME_MOUNT_PATH || __dirname;
 
 if (!fs.existsSync(dbDir)) {
@@ -72,6 +75,7 @@ async function init() {
       content     TEXT    NOT NULL,
       image_url   TEXT    DEFAULT NULL,
       parent_id   INTEGER DEFAULT NULL REFERENCES posts(id) ON DELETE CASCADE,
+      updated_at  DATETIME DEFAULT NULL,
       created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -106,14 +110,18 @@ async function init() {
       created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
-
   const cols = await db.all("PRAGMA table_info(users)");
   const colNames = cols.map(c => c.name);
   if (!colNames.includes('is_admin'))  await db.run("ALTER TABLE users ADD COLUMN is_admin  INTEGER DEFAULT 0");
   if (!colNames.includes('banned'))    await db.run("ALTER TABLE users ADD COLUMN banned    INTEGER DEFAULT 0");
   if (!colNames.includes('ban_reason'))await db.run("ALTER TABLE users ADD COLUMN ban_reason TEXT DEFAULT NULL");
+  const postCols = await db.all("PRAGMA table_info(posts)");
+  const postColNames = postCols.map(c => c.name);
+  if (!postColNames.includes('updated_at')) await db.run("ALTER TABLE posts ADD COLUMN updated_at DATETIME DEFAULT NULL");
   console.log('Banco de dados pronto');
 }
+
+//Eu definitivamente deveria ter pensado no banco completo antes de já mandar :C
 
 init().catch(err => { console.error('Erro ao inicializar banco:', err); process.exit(1); });
 

@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../db');
 const { authMiddleware } = require('../middleware/auth');
 
+// Helper: enrich post with interaction counts
 async function enrichPost(post, userId) {
   const [r1, r2, r3, r4, r5, r6, author] = await Promise.all([
     db.get('SELECT COUNT(*) as c FROM likes WHERE post_id = ?', [post.id]),
@@ -25,7 +26,7 @@ async function enrichPost(post, userId) {
   };
 }
 
-// GET /api/posts/feed  → só posts de quem você  segue
+// GET /api/posts/feed  → só posts de quem você segue
 router.get('/feed', authMiddleware, async (req, res) => {
   try {
     const posts = await db.all(`
@@ -55,7 +56,7 @@ router.get('/home', authMiddleware, async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Erro interno' }); }
 });
 
-// GET /api/posts/popular  → posts com n+ curtidas(mudarei conforme achar necessário)
+// GET /api/posts/popular  → posts com 2+ curtidas
 router.get('/popular', authMiddleware, async (req, res) => {
   try {
     const posts = await db.all(`
@@ -115,6 +116,7 @@ router.post('/', authMiddleware, async (req, res) => {
   const { content, image_url, images, parent_id } = req.body;
   if (!content || !content.trim()) return res.status(400).json({ error: 'Conteúdo obrigatório' });
   try {
+    // Suporta múltiplas imagens (array) ou imagem única (string)
     let finalImageUrl = null;
     const imgList = images && Array.isArray(images) ? images : (image_url ? [image_url] : []);
     const safeImgs = imgList.filter(url => {
@@ -152,7 +154,10 @@ router.patch('/:id', authMiddleware, async (req, res) => {
     if (post.user_id !== req.userId) return res.status(403).json({ error: 'Sem permissão' });
     const { content } = req.body;
     if (!content || !content.trim()) return res.status(400).json({ error: 'Conteúdo obrigatório' });
-    await db.run('UPDATE posts SET content = ? WHERE id = ?', [content.trim(), req.params.id]);
+    await db.run(
+      "UPDATE posts SET content = ?, updated_at = datetime('now') WHERE id = ?",
+      [content.trim(), req.params.id]
+    );
     const updated = await db.get('SELECT * FROM posts WHERE id = ?', [req.params.id]);
     res.json(await enrichPost(updated, req.userId));
   } catch (err) { console.error(err); res.status(500).json({ error: 'Erro interno' }); }

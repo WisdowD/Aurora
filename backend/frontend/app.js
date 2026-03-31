@@ -56,7 +56,7 @@ function avatarHtml(user, size = 'sm') {
   return `<div class="avatar avatar-${size} avatar-placeholder">${letter}</div>`;
 }
 
-/* ─── Temas ─── */
+/* ─── Theme ─── */
 function toggleDarkMode(isDark) {
   document.body.classList.toggle('light', !isDark);
   localStorage.setItem('darkMode', isDark ? 'dark' : 'light');
@@ -86,13 +86,13 @@ function applyPreferences() {
   }
 }
 
-/* ─── Nav ─── */
+/* ─── Navigation ─── */
 function navigate(page, data = {}) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const el = document.getElementById(`page-${page}`);
   if (el) el.classList.add('active');
 
-  // sidebar itens
+  // sidebar items
   document.querySelectorAll('.sidebar-item[data-page]').forEach(n => n.classList.toggle('active', n.dataset.page === page));
   document.querySelectorAll('.mobile-nav-item[data-page]').forEach(n => n.classList.toggle('active', n.dataset.page === page));
 
@@ -113,7 +113,7 @@ function updateSidebarUser() {
   const hd = document.getElementById('sidebar-user-handle'); if (hd) hd.textContent = `@${u.handle || '—'}`;
 }
 
-/* ─── Painel na direita (Opções de quem seguir) ─── */
+/* ─── Right panel: who to follow ─── */
 async function loadWhoToFollow() {
   try {
     const users = await api('/users?q=');
@@ -154,6 +154,7 @@ function showApp() {
   fetchUnreadCount();
   loadWhoToFollow();
   applyPreferences();
+  // Busca dados atualizados do usuário (inclui is_admin)
   api('/users/me').then(u => {
     state.user = u;
     localStorage.setItem('user', JSON.stringify(u));
@@ -203,7 +204,7 @@ async function loadFeed(tab) {
     let endpoint;
     if (tab === 'popular') endpoint = '/posts/popular';
     else if (tab === 'home') endpoint = '/posts/home';
-    else endpoint = '/posts/feed'; // 'Seguindo'
+    else endpoint = '/posts/feed'; // 'following'
     const posts = await api(endpoint);
     if (!posts.length && tab === 'following') {
       c.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><p>Siga alguém para ver posts aqui!</p></div>`;
@@ -223,15 +224,16 @@ function parseImages(imageUrl) {
 }
 function imageCarousel(images, postId) {
   if (!images.length) return '';
+  const srcsJson = JSON.stringify(images).replace(/"/g, '&quot;');
   if (images.length === 1) {
-    return `<img class="post-image" src="${escHtml(images[0])}" alt="" loading="lazy" onclick="event.stopPropagation()">`;
+    return `<img class="post-image" src="${escHtml(images[0])}" alt="" loading="lazy" style="cursor:zoom-in" onclick="event.stopPropagation();openLightbox(${srcsJson},0)">`;
   }
   return `<div class="post-carousel" onclick="event.stopPropagation()">
     <div class="carousel-track" id="carousel-track-${postId}">
-      ${images.map(src => `<img class="carousel-img" src="${escHtml(src)}" alt="" loading="lazy">`).join('')}
+      ${images.map((src,i) => `<img class="carousel-img" src="${escHtml(src)}" alt="" loading="lazy" style="cursor:zoom-in" onclick="openLightbox(${srcsJson},${i})">`).join('')}
     </div>
-    <button class="carousel-btn carousel-prev" onclick="slideCarousel(${postId},-1)">&#8249;</button>
-    <button class="carousel-btn carousel-next" onclick="slideCarousel(${postId},1)">&#8250;</button>
+    <button class="carousel-btn carousel-prev" onclick="event.stopPropagation();slideCarousel(${postId},-1)">&#8249;</button>
+    <button class="carousel-btn carousel-next" onclick="event.stopPropagation();slideCarousel(${postId},1)">&#8250;</button>
     <div class="carousel-dots" id="carousel-dots-${postId}">
       ${images.map((_,i) => `<span class="carousel-dot ${i===0?'active':''}" onclick="goCarousel(${postId},${i})"></span>`).join('')}
     </div>
@@ -309,7 +311,7 @@ async function deletePost(id, btn) {
   } catch (e) { toast(e.message, 'error'); }
 }
 
-/* ══════════ EDITAR POST ══════════ */
+/* ══════════ EDIT POST ══════════ */
 let _editPostId = null;
 function openEditPost(id, content) {
   _editPostId = id;
@@ -336,7 +338,7 @@ async function submitEditPost() {
   } catch (e) { toast(e.message, 'error'); }
 }
 
-/* ── Interações ── */
+/* ── Interactions ── */
 async function toggleLike(id, btn) {
   try {
     const r = await api(`/posts/${id}/like`, { method: 'POST' });
@@ -368,7 +370,7 @@ let currentCommentPostId = null;
 function openNewPost() { replyToId = null; openPostSheet(); }
 function openReply(id) { replyToId = id; openPostSheet(); }
 
-/* ══════════ COMENTÁRIOS ══════════ */
+/* ══════════ COMMENTS ══════════ */
 async function openComments(postId) {
   currentCommentPostId = postId;
   const overlay = document.getElementById('overlay-comments');
@@ -377,6 +379,7 @@ async function openComments(postId) {
   overlay.classList.add('open');
   listEl.innerHTML = `<div class="loader"><div class="spinner"></div></div>`;
   origEl.innerHTML = '';
+  // update my avatar
   if (state.user) {
     const av = document.getElementById('comments-my-avatar');
     if (state.user.avatar_url) { av.innerHTML = `<img src="${escHtml(state.user.avatar_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`; av.style.background = 'none'; }
@@ -384,6 +387,7 @@ async function openComments(postId) {
   }
   try {
     const data = await api(`/posts/${postId}`);
+    // backend returns { ...post, replies: [...] }
     const p = data;
     origEl.innerHTML = `<div class="comment-original-card">
       <div style="display:flex;gap:10px;align-items:flex-start">
@@ -399,20 +403,28 @@ async function openComments(postId) {
     if (!replies.length) {
       listEl.innerHTML = `<div class="empty-state" style="padding:32px 0"><p>Nenhum comentário ainda. Seja o primeiro!</p></div>`;
     } else {
-      listEl.innerHTML = replies.map(r => `
-        <div class="comment-item">
+      listEl.innerHTML = replies.map(r => {
+        const isMyComment = state.user && r.author?.id === state.user.id;
+        const safeContent = r.content.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        return `
+        <div class="comment-item" data-comment-id="${r.id}">
           <div style="display:flex;gap:10px;align-items:flex-start">
             ${avatarHtml(r.author, 'sm')}
             <div style="flex:1;min-width:0">
               <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
                 <span class="post-author-name">${escHtml(r.author?.username||'')}</span>
                 <span class="post-author-handle">@${escHtml(r.author?.handle||'')} · ${timeAgo(r.created_at)}</span>
+                ${r.updated_at ? `<span style="font-size:.75em;color:var(--text-2);font-style:italic">· editado</span>` : ''}
               </div>
               <div class="post-content" style="margin-top:2px">${escHtml(r.content)}</div>
-              ${r.image_url ? `<img src="${escHtml(r.image_url)}" style="max-width:100%;border-radius:10px;margin-top:8px" loading="lazy">` : ''}
+              ${r.image_url ? `<img src="${escHtml(r.image_url)}" style="max-width:100%;border-radius:10px;margin-top:8px;cursor:zoom-in" loading="lazy" onclick="openLightbox([this.src],0)">` : ''}
             </div>
+            ${isMyComment ? `<button class="post-action" title="Editar comentário" onclick="openEditComment(${r.id},'${safeContent}')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>` : ''}
           </div>
-        </div>`).join('');
+        </div>`;
+      }).join('');
     }
   } catch(e) {
     listEl.innerHTML = `<div class="empty-state"><p>Erro ao carregar comentários.</p></div>`;
@@ -443,7 +455,7 @@ function autoResizeCommentBox(el) {
   el.style.height = Math.min(el.scrollHeight, 120) + 'px';
 }
 
-/* ══════════ TRENDING ══════════ */
+/* ══════════ TRENDING SEARCH ══════════ */
 function searchTrending(tag) {
   navigate('search');
 }
@@ -541,7 +553,7 @@ async function submitPost() {
   } catch (e) { toast(e.message, 'error'); }
 }
 
-/* ══════════ PESQUISA ══════════ */
+/* ══════════ SEARCH ══════════ */
 let searchTimer;
 async function initSearch() { document.getElementById('search-input').value = ''; loadHighlights(); }
 async function loadHighlights() {
@@ -575,7 +587,7 @@ async function quickFollow(id, btn) {
   try { const r = await api(`/users/${id}/follow`, { method: 'POST' }); btn.textContent = r.following ? 'Seguindo' : 'Seguir'; btn.classList.toggle('following', r.following); } catch (e) { toast(e.message, 'error'); }
 }
 
-/* ══════════ NOTIFICAÇÕES ══════════ */
+/* ══════════ NOTIFICATIONS ══════════ */
 async function initNotifications() {
   const c = document.getElementById('notif-list');
   c.innerHTML = `<div class="loader"><div class="spinner"></div></div>`;
@@ -718,6 +730,7 @@ function openEditProfile() {
   document.getElementById('edit-bio').value = u.bio || '';
   document.getElementById('edit-avatar').value = u.avatar_url || '';
   document.getElementById('edit-banner').value = u.banner_url || '';
+  // populate image previews
   const avatarImg = document.getElementById('edit-avatar-img');
   if (u.avatar_url) { avatarImg.src = u.avatar_url; avatarImg.style.display = 'block'; } else avatarImg.style.display = 'none';
   const bannerImg = document.getElementById('edit-banner-img');
@@ -731,6 +744,7 @@ async function submitEditProfile() {
     const avatar_url = avatarInput.dataset.localSrc || avatarInput.value;
     const banner_url = bannerInput.dataset.localSrc || bannerInput.value;
     const user = await api('/users/me', { method: 'PUT', body: JSON.stringify({ username: document.getElementById('edit-username').value, bio: document.getElementById('edit-bio').value, avatar_url, banner_url }) });
+    // clear local src cache
     avatarInput.dataset.localSrc = ''; bannerInput.dataset.localSrc = '';
     state.user = user; localStorage.setItem('user', JSON.stringify(user));
     document.getElementById('overlay-edit').classList.remove('open');
@@ -745,6 +759,7 @@ function initSettings() {
   applyPreferences();
   const adminSection = document.getElementById('settings-admin-section');
   if (adminSection) adminSection.style.display = state.user?.is_admin ? '' : 'none';
+  // Garante dados frescos do servidor
   api('/users/me').then(u => {
     state.user = u;
     localStorage.setItem('user', JSON.stringify(u));
@@ -847,6 +862,62 @@ async function unbanUser(userId, btn) {
     await api(`/admin/users/${userId}/unban`, { method: 'POST' });
     toast('Usuário desbanido.', 'success');
     loadAdminUsers();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+/* ══════════ LIGHTBOX ══════════ */
+let _lbImages = [], _lbIndex = 0;
+function openLightbox(images, index) {
+  _lbImages = Array.isArray(images) ? images : [images];
+  _lbIndex = index;
+  const el = document.getElementById('overlay-lightbox');
+  el.style.display = 'flex';
+  document.getElementById('lightbox-img').src = _lbImages[_lbIndex];
+  const hasMult = _lbImages.length > 1;
+  document.getElementById('lightbox-prev').style.display = hasMult ? 'flex' : 'none';
+  document.getElementById('lightbox-next').style.display = hasMult ? 'flex' : 'none';
+  const counter = document.getElementById('lightbox-counter');
+  counter.style.display = hasMult ? 'block' : 'none';
+  if (hasMult) counter.textContent = `${_lbIndex + 1} / ${_lbImages.length}`;
+  document.addEventListener('keydown', _lbKeyHandler);
+}
+function closeLightbox() {
+  document.getElementById('overlay-lightbox').style.display = 'none';
+  document.removeEventListener('keydown', _lbKeyHandler);
+}
+function lightboxSlide(dir) {
+  _lbIndex = (_lbIndex + dir + _lbImages.length) % _lbImages.length;
+  document.getElementById('lightbox-img').src = _lbImages[_lbIndex];
+  document.getElementById('lightbox-counter').textContent = `${_lbIndex + 1} / ${_lbImages.length}`;
+}
+function _lbKeyHandler(e) {
+  if (e.key === 'Escape') closeLightbox();
+  else if (e.key === 'ArrowRight') lightboxSlide(1);
+  else if (e.key === 'ArrowLeft') lightboxSlide(-1);
+}
+
+/* ══════════ EDIT COMMENT ══════════ */
+let _editCommentId = null;
+function openEditComment(id, content) {
+  _editCommentId = id;
+  const ta = document.getElementById('edit-comment-textarea');
+  ta.value = content;
+  document.getElementById('edit-comment-char-count').textContent = 280 - content.length;
+  document.getElementById('overlay-edit-comment').classList.add('open');
+  ta.focus();
+}
+function closeEditComment() {
+  _editCommentId = null;
+  document.getElementById('overlay-edit-comment').classList.remove('open');
+}
+async function submitEditComment() {
+  const content = document.getElementById('edit-comment-textarea').value.trim();
+  if (!content) return toast('Escreva algo!', 'error');
+  try {
+    await api(`/posts/${_editCommentId}`, { method: 'PATCH', body: JSON.stringify({ content }) });
+    toast('Comentário editado!', 'success');
+    closeEditComment();
+    if (currentCommentPostId) openComments(currentCommentPostId);
   } catch (e) { toast(e.message, 'error'); }
 }
 
