@@ -53,7 +53,7 @@ O arquivo `social.db` é criado automaticamente na primeira execução do backen
 |--------|-----------|
 | `users` | Usuários (username, handle, email, password hash, bio, avatar, is_admin, banned, ban_reason) |
 | `follows` | Relação seguidor/seguido |
-| `posts` | Posts e replies (parent_id para threads) |
+| `posts` | Posts e replies (parent_id para threads, updated_at para controle de edição) |
 | `likes` | Curtidas |
 | `saved_posts` | Posts salvos |
 | `notifications` | Notificações (like, comment, share, follow) |
@@ -87,6 +87,7 @@ GET    /api/posts/popular
 GET    /api/posts/user/:userId
 GET    /api/posts/:id
 POST   /api/posts
+PATCH  /api/posts/:id       
 DELETE /api/posts/:id
 POST   /api/posts/:id/like
 POST   /api/posts/:id/share
@@ -113,11 +114,10 @@ GET  /api/notifications/unread-count
 ## 📱 Telas implementadas
 
 - **Login / Cadastro** — autenticação JWT
-- **Home** — feed (seguindo / home / popular) + stories bar
+- **Home** — feed (seguindo / home / popular)
 - **Busca** — pesquisa de usuários + highlights
 - **Notificações** — hoje / ontem / anteriores com badge
 - **Perfil** — posts / respostas / salvos + editar perfil
 - **Configurações** — notificações, modo escuro, sair
 
 ---
-

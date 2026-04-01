@@ -56,7 +56,7 @@ function avatarHtml(user, size = 'sm') {
   return `<div class="avatar avatar-${size} avatar-placeholder">${letter}</div>`;
 }
 
-/* ─── Theme ─── */
+/* ─── Temas ─── */
 function toggleDarkMode(isDark) {
   document.body.classList.toggle('light', !isDark);
   localStorage.setItem('darkMode', isDark ? 'dark' : 'light');
@@ -86,7 +86,7 @@ function applyPreferences() {
   }
 }
 
-/* ─── Navigation ─── */
+/* ─── Nav ─── */
 function navigate(page, data = {}) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const el = document.getElementById(`page-${page}`);
@@ -113,7 +113,7 @@ function updateSidebarUser() {
   const hd = document.getElementById('sidebar-user-handle'); if (hd) hd.textContent = `@${u.handle || '—'}`;
 }
 
-/* ─── Right panel: who to follow ─── */
+/* ─── Painel direito (sugestões de follow) ─── */
 async function loadWhoToFollow() {
   try {
     const users = await api('/users?q=');
@@ -136,7 +136,7 @@ async function loadWhoToFollow() {
   } catch { }
 }
 
-/* ══════════ AUTH ══════════ */
+/* ══════════ AUTH(login) ══════════ */
 function initAuth() {
   document.getElementById('app').style.display = 'none';
   document.getElementById('page-auth').style.display = 'flex';
@@ -154,7 +154,6 @@ function showApp() {
   fetchUnreadCount();
   loadWhoToFollow();
   applyPreferences();
-  // Busca dados atualizados do usuário (inclui is_admin)
   api('/users/me').then(u => {
     state.user = u;
     localStorage.setItem('user', JSON.stringify(u));
@@ -273,7 +272,7 @@ function postCard(p) {
       <div style="flex-shrink:0" onclick="event.stopPropagation();navigate('profile',{userId:${p.author?.id}})">${avatarHtml(p.author, 'sm')}</div>
       <div style="flex:1;min-width:0" onclick="event.stopPropagation();navigate('profile',{userId:${p.author?.id}})">
         <div class="post-author-name">${escHtml(p.author?.username || 'Usuário')}</div>
-        <div class="post-author-handle">@${escHtml(p.author?.handle || '')} · ${timeAgo(p.created_at)}</div>
+        <div class="post-author-handle">@${escHtml(p.author?.handle || '')} · ${timeAgo(p.created_at)}${p.updated_at ? ` <span style="font-size:.75em;color:var(--text-2);font-style:italic">· editado</span>` : ''}</div>
       </div>
       <div style="display:flex;gap:4px">
         ${isOwner ? `<button class="post-action" title="Editar post" onclick="event.stopPropagation();openEditPost(${p.id},'${safeContent}',${JSON.stringify(images).replace(/"/g,"'")})">
@@ -311,7 +310,7 @@ async function deletePost(id, btn) {
   } catch (e) { toast(e.message, 'error'); }
 }
 
-/* ══════════ EDIT POST ══════════ */
+/* ══════════ EDITAR POST ══════════ */
 let _editPostId = null;
 let _editPostImages = [];
 
@@ -369,7 +368,7 @@ async function submitEditPost() {
   } catch (e) { toast(e.message, 'error'); }
 }
 
-/* ── Interactions ── */
+/* ── Interações ── */
 async function toggleLike(id, btn) {
   try {
     const r = await api(`/posts/${id}/like`, { method: 'POST' });
@@ -401,7 +400,7 @@ let currentCommentPostId = null;
 function openNewPost() { replyToId = null; openPostSheet(); }
 function openReply(id) { replyToId = id; openPostSheet(); }
 
-/* ══════════ COMMENTS ══════════ */
+/* ══════════ COMENTÁRIOS ══════════ */
 async function openComments(postId) {
   currentCommentPostId = postId;
   const overlay = document.getElementById('overlay-comments');
@@ -410,7 +409,6 @@ async function openComments(postId) {
   overlay.classList.add('open');
   listEl.innerHTML = `<div class="loader"><div class="spinner"></div></div>`;
   origEl.innerHTML = '';
-  // update my avatar
   if (state.user) {
     const av = document.getElementById('comments-my-avatar');
     if (state.user.avatar_url) { av.innerHTML = `<img src="${escHtml(state.user.avatar_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`; av.style.background = 'none'; }
@@ -418,14 +416,13 @@ async function openComments(postId) {
   }
   try {
     const data = await api(`/posts/${postId}`);
-    // backend returns { ...post, replies: [...] }
     const p = data;
     origEl.innerHTML = `<div class="comment-original-card">
       <div style="display:flex;gap:10px;align-items:flex-start">
         ${avatarHtml(p.author, 'sm')}
         <div>
           <span class="post-author-name">${escHtml(p.author?.username||'')}</span>
-          <span class="post-author-handle" style="margin-left:6px">@${escHtml(p.author?.handle||'')} · ${timeAgo(p.created_at)}</span>
+          <span class="post-author-handle" style="margin-left:6px">@${escHtml(p.author?.handle||'')} · ${timeAgo(p.created_at)}${p.updated_at ? ` <span style="font-size:.75em;color:var(--text-2);font-style:italic">· editado</span>` : ''}</span>
           <div class="post-content" style="margin-top:4px">${escHtml(p.content)}</div>
         </div>
       </div>
@@ -486,7 +483,7 @@ function autoResizeCommentBox(el) {
   el.style.height = Math.min(el.scrollHeight, 120) + 'px';
 }
 
-/* ══════════ TRENDING SEARCH ══════════ */
+/* ══════════ TRENDING ══════════ */
 function searchTrending(tag) {
   navigate('search');
 }
@@ -584,7 +581,7 @@ async function submitPost() {
   } catch (e) { toast(e.message, 'error'); }
 }
 
-/* ══════════ SEARCH ══════════ */
+/* ══════════ PESQUISA ══════════ */
 let searchTimer;
 async function initSearch() { document.getElementById('search-input').value = ''; loadHighlights(); }
 async function loadHighlights() {
@@ -618,7 +615,7 @@ async function quickFollow(id, btn) {
   try { const r = await api(`/users/${id}/follow`, { method: 'POST' }); btn.textContent = r.following ? 'Seguindo' : 'Seguir'; btn.classList.toggle('following', r.following); } catch (e) { toast(e.message, 'error'); }
 }
 
-/* ══════════ NOTIFICATIONS ══════════ */
+/* ══════════ NOTIFICAÇÕES ══════════ */
 async function initNotifications() {
   const c = document.getElementById('notif-list');
   c.innerHTML = `<div class="loader"><div class="spinner"></div></div>`;
@@ -667,7 +664,7 @@ function updateNotifBadge() {
   });
 }
 
-/* ══════════ PROFILE ══════════ */
+/* ══════════ PERFIL ══════════ */
 async function initProfile(userId) {
   const isMe = !userId || userId === state.user?.id;
   const c = document.getElementById('profile-content');
@@ -761,7 +758,6 @@ function openEditProfile() {
   document.getElementById('edit-bio').value = u.bio || '';
   document.getElementById('edit-avatar').value = u.avatar_url || '';
   document.getElementById('edit-banner').value = u.banner_url || '';
-  // populate image previews
   const avatarImg = document.getElementById('edit-avatar-img');
   if (u.avatar_url) { avatarImg.src = u.avatar_url; avatarImg.style.display = 'block'; } else avatarImg.style.display = 'none';
   const bannerImg = document.getElementById('edit-banner-img');
@@ -775,7 +771,6 @@ async function submitEditProfile() {
     const avatar_url = avatarInput.dataset.localSrc || avatarInput.value;
     const banner_url = bannerInput.dataset.localSrc || bannerInput.value;
     const user = await api('/users/me', { method: 'PUT', body: JSON.stringify({ username: document.getElementById('edit-username').value, bio: document.getElementById('edit-bio').value, avatar_url, banner_url }) });
-    // clear local src cache
     avatarInput.dataset.localSrc = ''; bannerInput.dataset.localSrc = '';
     state.user = user; localStorage.setItem('user', JSON.stringify(user));
     document.getElementById('overlay-edit').classList.remove('open');
@@ -785,12 +780,11 @@ async function submitEditProfile() {
   } catch (e) { toast(e.message, 'error'); }
 }
 
-/* ══════════ SETTINGS ══════════ */
+/* ══════════ CONFIGS ══════════ */
 function initSettings() {
   applyPreferences();
   const adminSection = document.getElementById('settings-admin-section');
   if (adminSection) adminSection.style.display = state.user?.is_admin ? '' : 'none';
-  // Garante dados frescos do servidor
   api('/users/me').then(u => {
     state.user = u;
     localStorage.setItem('user', JSON.stringify(u));
@@ -798,7 +792,7 @@ function initSettings() {
   }).catch(() => {});
 }
 
-/* ══════════ ADMIN PANEL ══════════ */
+/* ══════════ PAINEL ADMIN ══════════ */
 let _banTargetId = null;
 
 function openAdminPanel() {
@@ -927,7 +921,7 @@ function _lbKeyHandler(e) {
   else if (e.key === 'ArrowLeft') lightboxSlide(-1);
 }
 
-/* ══════════ EDIT COMMENT ══════════ */
+/* ══════════ EDITAR COMENTÁRIO ══════════ */
 let _editCommentId = null;
 function openEditComment(id, content) {
   _editCommentId = id;
