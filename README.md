@@ -56,7 +56,7 @@ O arquivo `social.db` é criado automaticamente na primeira execução do backen
 | `posts` | Posts e replies (parent_id para threads, updated_at para controle de edição) |
 | `likes` | Curtidas |
 | `saved_posts` | Posts salvos |
-| `notifications` | Notificações (like, comment, share, follow) |
+| `notifications` | Notificações (like, comment, follow) |
 
 ---
 
@@ -90,7 +90,7 @@ POST   /api/posts
 PATCH  /api/posts/:id       
 DELETE /api/posts/:id
 POST   /api/posts/:id/like
-POST   /api/posts/:id/share
+POST   /api/posts/:id/share - descartado
 POST   /api/posts/:id/save
 ```
 
