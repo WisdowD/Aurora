@@ -4,7 +4,7 @@ Rede social completa baseada no design do Figma.
 
 ---
 
-## 📁 Estrutura
+## Estrutura
 
 ```
 /
@@ -32,7 +32,7 @@ Rede social completa baseada no design do Figma.
 
 ---
 
-## 🚀 Instalação
+## Instalação
 
 ### Backend
 
@@ -43,7 +43,7 @@ node server.js
 # Servidor em http://localhost:3001
 ```
 
-## 🗄️ Banco de Dados (SQLite)
+## Banco de Dados (SQLite)
 
 O arquivo `social.db` é criado automaticamente na primeira execução do backend.
 
